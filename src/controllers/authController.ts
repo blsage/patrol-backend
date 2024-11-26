@@ -1,11 +1,12 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { sendVerificationCode, verifyCode } from '../services/smsService';
 
-export const sendCode = async (req: Request, res: Response) => {
+export const sendCode = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { phoneNumber } = req.body;
 
     if (!phoneNumber) {
-        return res.status(400).json({ message: 'Phone number is required.' });
+        res.status(400).json({ message: 'Phone number is required.' });
+        return;
     }
 
     try {
@@ -13,15 +14,16 @@ export const sendCode = async (req: Request, res: Response) => {
         res.status(200).json({ message: 'Verification code sent.' });
     } catch (error) {
         console.error('Error sending verification code:', error);
-        res.status(500).json({ message: 'Failed to send verification code.' });
+        next(error);
     }
 };
 
-export const verifyCodeEndpoint = async (req: Request, res: Response) => {
+export const verifyCodeEndpoint = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { phoneNumber, code } = req.body;
 
     if (!phoneNumber || !code) {
-        return res.status(400).json({ message: 'Phone number and code are required.' });
+        res.status(400).json({ message: 'Phone number and code are required.' });
+        return;
     }
 
     try {
@@ -34,6 +36,6 @@ export const verifyCodeEndpoint = async (req: Request, res: Response) => {
         }
     } catch (error) {
         console.error('Error verifying code:', error);
-        res.status(500).json({ message: 'Failed to verify code.' });
+        next(error);
     }
 };
