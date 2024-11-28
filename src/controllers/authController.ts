@@ -1,5 +1,10 @@
 import { Request, Response } from 'express';
 import { sendVerificationCode, verifyCode } from '../services/smsService';
+import { findUserByPhoneNumber, User } from '../models/userModel';
+import jwt from 'jsonwebtoken';
+import pool from '../db/db';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key';
 
 export const sendCode = async (req: Request, res: Response): Promise<void> => {
     const { phoneNumber } = req.body;
@@ -30,7 +35,28 @@ export const verifyCodeEndpoint = async (req: Request, res: Response): Promise<v
         const isVerified = await verifyCode(phoneNumber, code);
 
         if (isVerified) {
-            res.status(200).json({ message: 'Phone number verified.' });
+            const user = await findUserByPhoneNumber(phoneNumber);
+
+            if (user) {
+                const token = jwt.sign({ id: user.id }, JWT_SECRET, {
+                    expiresIn: '365d',
+                });
+
+                res.status(200).json({
+                    message: 'Phone number verified.',
+                    user,
+                    token,
+                });
+            } else {
+                const token = jwt.sign({ phoneNumber }, JWT_SECRET, {
+                    expiresIn: '15m',
+                });
+
+                res.status(200).json({
+                    message: 'Phone number verified. User does not exist.',
+                    token,
+                });
+            }
         } else {
             res.status(400).json({ message: 'Invalid verification code.' });
         }
