@@ -5,4 +5,6 @@ const userController_1 = require("../controllers/userController");
 const authMiddleware_1 = require("../middleware/authMiddleware");
 const router = (0, express_1.Router)();
 router.post('/', authMiddleware_1.authenticateJWT, userController_1.createUser);
+router.get('/me', authMiddleware_1.authenticateJWT, userController_1.getUser);
+router.patch('/me', authMiddleware_1.authenticateJWT, userController_1.updateUser);
 exports.default = router;

@@ -80,3 +80,27 @@ export const findUserByPhoneNumber = async (phoneNumber: string): Promise<User |
         return null;
     }
 };
+
+export const updateUserById = async (id: number, userData: Partial<User>): Promise<void> => {
+    const fields = [];
+    const values = [];
+    let index = 1;
+
+    const keys = Object.keys(userData) as (keyof User)[];
+
+    for (const key of keys) {
+        if (userData[key] !== undefined) {
+            fields.push(`${key} = $${index}`);
+            values.push(userData[key]);
+            index++;
+        }
+    }
+
+    if (fields.length === 0) {
+        throw new Error('No valid fields to update.');
+    }
+
+    values.push(id);
+    const query = `UPDATE users SET ${fields.join(', ')} WHERE id = $${index}`;
+    await pool.query(query, values);
+};
