@@ -1,16 +1,16 @@
 import { Request, Response } from 'express';
 import { sendVerificationCode, verifyCode } from '../services/smsService';
-import { findUserByPhoneNumber, User } from '../models/userModel';
+import { findUserByPhoneNumber } from '../models/userModel';
 import jwt from 'jsonwebtoken';
-import pool from '../db/db';
+import { showError } from '../utils/errorUtils';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key';
+const JWT_SECRET = process.env.JWT_SECRET as string;
 
 export const sendCode = async (req: Request, res: Response): Promise<void> => {
     const { phoneNumber } = req.body;
 
     if (!phoneNumber) {
-        res.status(400).json({ message: 'Phone number is required.' });
+        showError(res, 400, 'Phone number is required.');
         return;
     }
 
@@ -18,8 +18,8 @@ export const sendCode = async (req: Request, res: Response): Promise<void> => {
         await sendVerificationCode(phoneNumber);
         res.status(200).json({ message: 'Verification code sent.' });
     } catch (error) {
-        console.error('Error sending verification code:', error as Error);
-        res.status(400).json({ message: (error as Error).message || 'Failed to send verification code.' });
+        const errorMessage = (error as Error).message || 'Failed to send verification code.';
+        showError(res, 400, errorMessage);
     }
 };
 
@@ -27,7 +27,7 @@ export const verifyCodeEndpoint = async (req: Request, res: Response): Promise<v
     const { phoneNumber, code } = req.body;
 
     if (!phoneNumber || !code) {
-        res.status(400).json({ message: 'Phone number and code are required.' });
+        showError(res, 400, 'Phone number and code are required.');
         return;
     }
 
@@ -58,10 +58,10 @@ export const verifyCodeEndpoint = async (req: Request, res: Response): Promise<v
                 });
             }
         } else {
-            res.status(400).json({ message: 'Invalid verification code.' });
+            showError(res, 400, 'Invalid verification code.');
         }
     } catch (error) {
-        console.error('Error verifying code:', error as Error);
-        res.status(400).json({ message: (error as Error).message || 'Failed to verify code.' });
+        const errorMessage = (error as Error).message || 'Failed to verify code.';
+        showError(res, 400, errorMessage);
     }
 };
