@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import { findUserByPhoneNumber, User } from '../models/userModel';
+import { findUserById, findUserByPhoneNumber } from '../models/userModel';
 import jwt from 'jsonwebtoken';
 import pool from '../db/db';
 import { AuthenticatedRequest } from '../middleware/authMiddleware';
@@ -11,8 +11,8 @@ const JWT_SECRET = process.env.JWT_SECRET as string;
 export const createUser = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     const { email, first, last, title, phone, neighborhoodId, photoUrl } = req.body;
 
-    if (!email || !first || !last || !title || !phone) {
-        showError(res, 400, 'Email, first name, last name, title, and phone are required.');
+    if (!email || !first || !last || !title || !phone || !neighborhoodId) {
+        showError(res, 400, 'Email, first name, last name, title, phone, and neighborhoodId are required.');
         return;
     }
 
@@ -48,5 +48,31 @@ export const createUser = async (req: AuthenticatedRequest, res: Response): Prom
     } catch (error) {
         const errorMessage = (error as Error).message || 'Failed to create user.';
         showError(res, 400, errorMessage);
+    }
+};
+
+export const getUser = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const userId = req.user?.id;
+
+    if (!userId) {
+        showError(res, 401, 'Unauthorized');
+        return;
+    }
+
+    try {
+        const user = await findUserById(userId);
+
+        if (!user) {
+            showError(res, 404, 'User not found.');
+            return;
+        }
+
+        res.status(200).json({
+            message: 'User retrieved successfully.',
+            user,
+        });
+    } catch (error) {
+        const errorMessage = (error as Error).message || 'Failed to retrieve user.';
+        showError(res, 500, errorMessage);
     }
 };

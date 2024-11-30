@@ -1,9 +1,10 @@
 import { Router } from 'express';
-import { createUser } from '../controllers/userController';
+import { createUser, getUser } from '../controllers/userController';
 import { authenticateJWT } from '../middleware/authMiddleware';
 
 const router = Router();
 
 router.post('/', authenticateJWT, createUser);
+router.get('/me', authenticateJWT, getUser);
 
 export default router;
