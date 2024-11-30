@@ -7,7 +7,7 @@ import { AuthenticatedRequest } from '../middleware/authMiddleware';
 const JWT_SECRET = process.env.JWT_SECRET as string;
 
 export const createUser = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-    const { email, firstName, lastName, title } = req.body;
+    const { email, firstName, lastName, title, neighborhoodId, photoUrl } = req.body;
     const phoneNumber = req.user?.phoneNumber;
 
     if (!phoneNumber) {
@@ -29,8 +29,8 @@ export const createUser = async (req: AuthenticatedRequest, res: Response): Prom
         }
 
         const result = await pool.query(
-            'INSERT INTO users (phone_number, email, first_name, last_name, title) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-            [phoneNumber, email, firstName, lastName, title]
+            'INSERT INTO users (phone_number, email, first_name, last_name, title, neighborhood_id, photo_url) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+            [phoneNumber, email, firstName, lastName, title, neighborhoodId, photoUrl]
         );
 
         const user = result.rows[0] as User;
