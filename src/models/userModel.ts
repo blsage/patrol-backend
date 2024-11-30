@@ -9,11 +9,21 @@ export interface User {
     title: string;
     neighborhoodId: number | null;
     photoUrl: string | null;
+    monthlyContribution: number;
+    totalContribution: number;
 }
 
 export const findUserByPhoneNumber = async (phoneNumber: string): Promise<User | null> => {
     const result = await pool.query(
-        'SELECT * FROM users WHERE phone_number = $1',
+        `
+        SELECT u.*,
+            COALESCE(SUM(CASE WHEN c.is_monthly THEN c.amount ELSE 0 END), 0) AS "monthlyContribution",
+            COALESCE(SUM(c.amount), 0) AS "totalContribution"
+        FROM users u
+        LEFT JOIN contributions c ON u.id = c.user_id
+        WHERE u.phone_number = $1
+        GROUP BY u.id
+        `,
         [phoneNumber]
     );
 
@@ -28,6 +38,8 @@ export const findUserByPhoneNumber = async (phoneNumber: string): Promise<User |
             title: row.title,
             neighborhoodId: row.neighborhood_id,
             photoUrl: row.photo_url,
+            monthlyContribution: parseFloat(row.monthlyContribution) || 0,
+            totalContribution: parseFloat(row.totalContribution) || 0,
         };
         return user;
     } else {

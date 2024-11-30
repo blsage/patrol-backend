@@ -25,12 +25,16 @@ export const createUser = async (req: AuthenticatedRequest, res: Response): Prom
             return;
         }
 
-        const result = await pool.query(
-            'INSERT INTO users (phone_number, email, first_name, last_name, title, neighborhood_id, photo_url) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+        await pool.query(
+            'INSERT INTO users (phone_number, email, first_name, last_name, title, neighborhood_id, photo_url) VALUES ($1, $2, $3, $4, $5, $6, $7)',
             [formattedPhone, email, first, last, title, neighborhoodId, photoUrl]
         );
 
-        const user = result.rows[0] as User;
+        const user = await findUserByPhoneNumber(formattedPhone);
+        if (!user) {
+            showError(res, 500, 'Failed to retrieve user after creation.');
+            return;
+        }
 
         const token = jwt.sign({ id: user.id }, JWT_SECRET, {
             expiresIn: '360d',
