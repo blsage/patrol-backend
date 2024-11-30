@@ -67,10 +67,7 @@ export const getUser = async (req: AuthenticatedRequest, res: Response): Promise
             return;
         }
 
-        res.status(200).json({
-            message: 'User retrieved successfully.',
-            user,
-        });
+        res.status(200).json(user);
     } catch (error) {
         const errorMessage = (error as Error).message || 'Failed to retrieve user.';
         showError(res, 500, errorMessage);
