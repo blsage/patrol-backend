@@ -7,7 +7,7 @@ import { AuthenticatedRequest } from '../middleware/authMiddleware';
 const JWT_SECRET = process.env.JWT_SECRET as string;
 
 export const createUser = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-    const { email, firstName, lastName, title, neighborhoodId, photoUrl } = req.body;
+    const { email, first, last, title, neighborhoodId, photoUrl } = req.body;
     const phoneNumber = req.user?.phoneNumber;
 
     if (!phoneNumber) {
@@ -15,7 +15,7 @@ export const createUser = async (req: AuthenticatedRequest, res: Response): Prom
         return;
     }
 
-    if (!email || !firstName || !lastName || !title) {
+    if (!email || !first || !last || !title) {
         res.status(400).json({ message: 'Email, firstName, lastName, and title are required.' });
         return;
     }
@@ -30,13 +30,13 @@ export const createUser = async (req: AuthenticatedRequest, res: Response): Prom
 
         const result = await pool.query(
             'INSERT INTO users (phone_number, email, first_name, last_name, title, neighborhood_id, photo_url) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
-            [phoneNumber, email, firstName, lastName, title, neighborhoodId, photoUrl]
+            [phoneNumber, email, first, last, title, neighborhoodId, photoUrl]
         );
 
         const user = result.rows[0] as User;
 
         const token = jwt.sign({ id: user.id }, JWT_SECRET, {
-            expiresIn: '1h',
+            expiresIn: '15m',
         });
 
         res.status(201).json({
