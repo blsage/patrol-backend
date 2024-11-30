@@ -3,6 +3,7 @@ import { sendVerificationCode, verifyCode } from '../services/smsService';
 import { findUserByPhoneNumber } from '../models/userModel';
 import jwt from 'jsonwebtoken';
 import { showError } from '../utils/errorUtils';
+import { formatPhoneNumber } from '../utils/phoneUtils';
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
 
@@ -15,7 +16,10 @@ export const sendCode = async (req: Request, res: Response): Promise<void> => {
     }
 
     try {
-        await sendVerificationCode(phoneNumber);
+        const formattedPhoneNumber = formatPhoneNumber(phoneNumber);
+
+        await sendVerificationCode(formattedPhoneNumber);
+
         res.status(200).json({ message: 'Verification code sent.' });
     } catch (error) {
         const errorMessage = (error as Error).message || 'Failed to send verification code.';
@@ -32,10 +36,12 @@ export const verifyCodeEndpoint = async (req: Request, res: Response): Promise<v
     }
 
     try {
-        const isVerified = await verifyCode(phoneNumber, code);
+        const formattedPhoneNumber = formatPhoneNumber(phoneNumber);
+
+        const isVerified = await verifyCode(formattedPhoneNumber, code);
 
         if (isVerified) {
-            const user = await findUserByPhoneNumber(phoneNumber);
+            const user = await findUserByPhoneNumber(formattedPhoneNumber);
 
             if (user) {
                 const token = jwt.sign({ id: user.id }, JWT_SECRET, {
@@ -48,7 +54,7 @@ export const verifyCodeEndpoint = async (req: Request, res: Response): Promise<v
                     token,
                 });
             } else {
-                const token = jwt.sign({ phoneNumber }, JWT_SECRET, {
+                const token = jwt.sign({ phoneNumber: formattedPhoneNumber }, JWT_SECRET, {
                     expiresIn: '15m',
                 });
 

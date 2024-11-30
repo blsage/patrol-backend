@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import pool from '../db/db';
 import { AuthenticatedRequest } from '../middleware/authMiddleware';
 import { showError } from '../utils/errorUtils';
+import { formatPhoneNumber } from '../utils/phoneUtils';
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
 
@@ -11,12 +12,13 @@ export const createUser = async (req: AuthenticatedRequest, res: Response): Prom
     const { email, first, last, title, phone, neighborhoodId, photoUrl } = req.body;
 
     if (!email || !first || !last || !title || !phone) {
-        showError(res, 400, 'Email, firstName, lastName, and title are required.');
+        showError(res, 400, 'Email, first name, last name, title, and phone are required.');
         return;
     }
 
     try {
-        const userExists = await findUserByPhoneNumber(phone);
+        const formattedPhone = formatPhoneNumber(phone);
+        const userExists = await findUserByPhoneNumber(formattedPhone);
 
         if (userExists) {
             showError(res, 400, 'User already exists.');
@@ -25,13 +27,13 @@ export const createUser = async (req: AuthenticatedRequest, res: Response): Prom
 
         const result = await pool.query(
             'INSERT INTO users (phone_number, email, first_name, last_name, title, neighborhood_id, photo_url) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
-            [phone, email, first, last, title, neighborhoodId, photoUrl]
+            [formattedPhone, email, first, last, title, neighborhoodId, photoUrl]
         );
 
         const user = result.rows[0] as User;
 
         const token = jwt.sign({ id: user.id }, JWT_SECRET, {
-            expiresIn: '15m',
+            expiresIn: '360d',
         });
 
         res.status(201).json({
