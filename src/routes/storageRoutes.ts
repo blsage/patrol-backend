@@ -17,7 +17,7 @@ const s3Client = new S3Client({
     },
 });
 
-router.get('/presigned-url', authenticateJWT, async (req, res) => {
+router.get('/presigned-urls', authenticateJWT, async (req, res) => {
     try {
         const key = `uploads/${uuidv4()}.jpg`;
         const contentType = 'image/jpeg';
