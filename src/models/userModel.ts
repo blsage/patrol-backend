@@ -13,7 +13,12 @@ export interface User {
     monthlyContribution: number;
     totalContribution: number;
 }
-export const findUserById = async (id: number): Promise<User | null> => {
+
+interface UserRow {
+    [key: string]: any;
+}
+
+const _findUser = async (column: string, value: any): Promise<User | null> => {
     const result = await pool.query(
         `
         SELECT u.*,
@@ -21,14 +26,14 @@ export const findUserById = async (id: number): Promise<User | null> => {
             COALESCE(SUM(c.amount), 0) AS total_contribution
         FROM users u
         LEFT JOIN contributions c ON u.id = c.user_id
-        WHERE u.id = $1
+        WHERE u.${column} = $1
         GROUP BY u.id
         `,
-        [id]
+        [value]
     );
 
     if (result.rows.length > 0) {
-        const row = result.rows[0];
+        const row: UserRow = result.rows[0];
         const user = snakeToCamel(row) as User;
         return user;
     } else {
@@ -36,27 +41,12 @@ export const findUserById = async (id: number): Promise<User | null> => {
     }
 };
 
-export const findUserByPhoneNumber = async (phoneNumber: string): Promise<User | null> => {
-    const result = await pool.query(
-        `
-        SELECT u.*,
-            COALESCE(SUM(CASE WHEN c.is_monthly THEN c.amount ELSE 0 END), 0) AS "monthlyContribution",
-            COALESCE(SUM(c.amount), 0) AS "totalContribution"
-        FROM users u
-        LEFT JOIN contributions c ON u.id = c.user_id
-        WHERE u.phone_number = $1
-        GROUP BY u.id
-        `,
-        [phoneNumber]
-    );
+export const findUserById = async (id: number): Promise<User | null> => {
+    return await _findUser('id', id);
+};
 
-    if (result.rows.length > 0) {
-        const row = result.rows[0];
-        const user = snakeToCamel(row) as User;
-        return user;
-    } else {
-        return null;
-    }
+export const findUserByPhoneNumber = async (phoneNumber: string): Promise<User | null> => {
+    return await _findUser('phone_number', phoneNumber);
 };
 
 export const updateUserById = async (id: number, userData: Partial<User>): Promise<void> => {
