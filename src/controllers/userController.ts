@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import { findUserById, updateUserById, User } from '../models/userModel';
+import { findUserById, updateUserById, deleteUserById, User } from '../models/userModel';
 import pool from '../db/db';
 import { AuthenticatedRequest } from '../middleware/authMiddleware';
 import { showError } from '../utils/errorUtils';
@@ -102,5 +102,30 @@ export const updateUser = async (req: AuthenticatedRequest, res: Response): Prom
     } catch (error) {
         const errorMessage = (error as Error).message || 'Failed to update user.';
         showError(res, 400, errorMessage);
+    }
+};
+
+export const deleteUser = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const userId = req.user?.id;
+
+    if (!userId) {
+        showError(res, 401, 'Unauthorized');
+        return;
+    }
+
+    try {
+        const user = await findUserById(userId);
+
+        if (!user) {
+            showError(res, 404, 'User not found.');
+            return;
+        }
+
+        await deleteUserById(userId);
+
+        res.status(200).json({ message: 'User deleted successfully.' });
+    } catch (error) {
+        const errorMessage = (error as Error).message || 'Failed to delete user.';
+        showError(res, 500, errorMessage);
     }
 };

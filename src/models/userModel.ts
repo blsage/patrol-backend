@@ -75,3 +75,8 @@ export const updateUserById = async (id: number, userData: Partial<User>): Promi
     const query = `UPDATE users SET ${fields.join(', ')} WHERE id = $${index}`;
     await pool.query(query, values);
 };
+
+export const deleteUserById = async (id: number): Promise<void> => {
+    const query = 'DELETE FROM users WHERE id = $1';
+    await pool.query(query, [id]);
+};
