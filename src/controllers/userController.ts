@@ -1,49 +1,31 @@
 import { Response } from 'express';
-import { findUserById, findUserByPhoneNumber, updateUserById } from '../models/userModel';
+import { findUserById, findUserByPhoneNumber, updateUserById, User } from '../models/userModel';
 import jwt from 'jsonwebtoken';
 import pool from '../db/db';
 import { AuthenticatedRequest } from '../middleware/authMiddleware';
 import { showError } from '../utils/errorUtils';
 import { formatPhoneNumber } from '../utils/phoneUtils';
+import { camelToSnake, snakeToCamel } from '../utils/caseConverter';
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
 
 export const createUser = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-    const { email, first, last, title, phone, neighborhoodId, photoUrl } = req.body;
-
-    if (!email || !first || !last || !title || !phone || !neighborhoodId) {
-        showError(res, 400, 'Email, first name, last name, title, phone, and neighborhoodId are required.');
-        return;
-    }
+    const userData = req.body;
 
     try {
-        const formattedPhone = formatPhoneNumber(phone);
-        const userExists = await findUserByPhoneNumber(formattedPhone);
+        const snakeUserData = camelToSnake(userData);
+        const fields = Object.keys(snakeUserData).join(', ');
+        const placeholders = Object.keys(snakeUserData).map((_, index) => `$${index + 1}`).join(', ');
+        const values = Object.values(snakeUserData);
 
-        if (userExists) {
-            showError(res, 400, 'User already exists.');
-            return;
-        }
+        const query = `INSERT INTO users (${fields}) VALUES (${placeholders}) RETURNING *`;
+        const result = await pool.query(query, values);
 
-        await pool.query(
-            'INSERT INTO users (phone_number, email, first_name, last_name, title, neighborhood_id, photo_url) VALUES ($1, $2, $3, $4, $5, $6, $7)',
-            [formattedPhone, email, first, last, title, neighborhoodId, photoUrl]
-        );
-
-        const user = await findUserByPhoneNumber(formattedPhone);
-        if (!user) {
-            showError(res, 500, 'Failed to retrieve user after creation.');
-            return;
-        }
-
-        const token = jwt.sign({ id: user.id }, JWT_SECRET, {
-            expiresIn: '360d',
-        });
+        const user = snakeToCamel(result.rows[0]) as User;
 
         res.status(201).json({
             message: 'User created successfully.',
             user,
-            token,
         });
     } catch (error) {
         const errorMessage = (error as Error).message || 'Failed to create user.';

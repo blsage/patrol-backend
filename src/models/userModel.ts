@@ -1,4 +1,5 @@
 import pool from '../db/db';
+import { camelToSnake, snakeToCamel } from '../utils/caseConverter';
 
 export interface User {
     id: number;
@@ -12,13 +13,12 @@ export interface User {
     monthlyContribution: number;
     totalContribution: number;
 }
-
 export const findUserById = async (id: number): Promise<User | null> => {
     const result = await pool.query(
         `
         SELECT u.*,
-            COALESCE(SUM(CASE WHEN c.is_monthly THEN c.amount ELSE 0 END), 0) AS "monthlyContribution",
-            COALESCE(SUM(c.amount), 0) AS "totalContribution"
+            COALESCE(SUM(CASE WHEN c.is_monthly THEN c.amount ELSE 0 END), 0) AS monthly_contribution,
+            COALESCE(SUM(c.amount), 0) AS total_contribution
         FROM users u
         LEFT JOIN contributions c ON u.id = c.user_id
         WHERE u.id = $1
@@ -29,18 +29,7 @@ export const findUserById = async (id: number): Promise<User | null> => {
 
     if (result.rows.length > 0) {
         const row = result.rows[0];
-        const user: User = {
-            id: row.id,
-            phoneNumber: row.phone_number,
-            email: row.email,
-            firstName: row.first_name,
-            lastName: row.last_name,
-            title: row.title,
-            neighborhoodId: row.neighborhood_id,
-            photoUrl: row.photo_url,
-            monthlyContribution: parseFloat(row.monthlyContribution) || 0,
-            totalContribution: parseFloat(row.totalContribution) || 0,
-        };
+        const user = snakeToCamel(row) as User;
         return user;
     } else {
         return null;
@@ -63,18 +52,7 @@ export const findUserByPhoneNumber = async (phoneNumber: string): Promise<User |
 
     if (result.rows.length > 0) {
         const row = result.rows[0];
-        const user: User = {
-            id: row.id,
-            phoneNumber: row.phone_number,
-            email: row.email,
-            firstName: row.first_name,
-            lastName: row.last_name,
-            title: row.title,
-            neighborhoodId: row.neighborhood_id,
-            photoUrl: row.photo_url,
-            monthlyContribution: parseFloat(row.monthlyContribution) || 0,
-            totalContribution: parseFloat(row.totalContribution) || 0,
-        };
+        const user = snakeToCamel(row) as User;
         return user;
     } else {
         return null;
@@ -82,16 +60,17 @@ export const findUserByPhoneNumber = async (phoneNumber: string): Promise<User |
 };
 
 export const updateUserById = async (id: number, userData: Partial<User>): Promise<void> => {
+    const snakeUserData = camelToSnake(userData) as { [key: string]: any };
     const fields = [];
     const values = [];
     let index = 1;
 
-    const keys = Object.keys(userData) as (keyof User)[];
+    const keys = Object.keys(snakeUserData);
 
     for (const key of keys) {
-        if (userData[key] !== undefined) {
+        if (snakeUserData[key] !== undefined) {
             fields.push(`${key} = $${index}`);
-            values.push(userData[key]);
+            values.push(snakeUserData[key]);
             index++;
         }
     }
