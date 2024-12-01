@@ -35,6 +35,8 @@ const _findUser = async (column: string, value: any): Promise<User | null> => {
     if (result.rows.length > 0) {
         const row: UserRow = result.rows[0];
         const user = snakeToCamel(row) as User;
+        user.monthlyContribution = parseFloat(user.monthlyContribution as any) || 0;
+        user.totalContribution = parseFloat(user.totalContribution as any) || 0;
         return user;
     } else {
         return null;
