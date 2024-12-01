@@ -9,9 +9,7 @@ import { camelToSnake, snakeToCamel } from '../utils/caseConverter';
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
 
-export const createUser = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-    const userData = req.body;
-
+export const createUser = async ({ body: userData }: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
         const snakeUserData = camelToSnake(userData);
         const fields = Object.keys(snakeUserData).join(', ');
