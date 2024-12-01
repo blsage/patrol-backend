@@ -1,16 +1,17 @@
 import { Response } from 'express';
-import { findUserById, findUserByPhoneNumber, updateUserById, User } from '../models/userModel';
-import jwt from 'jsonwebtoken';
+import { findUserById, updateUserById, User } from '../models/userModel';
 import pool from '../db/db';
 import { AuthenticatedRequest } from '../middleware/authMiddleware';
 import { showError } from '../utils/errorUtils';
 import { formatPhoneNumber } from '../utils/phoneUtils';
 import { camelToSnake, snakeToCamel } from '../utils/caseConverter';
 
-const JWT_SECRET = process.env.JWT_SECRET as string;
-
 export const createUser = async ({ body: userData }: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+        if (userData.phoneNumber) {
+            userData.phoneNumber = formatPhoneNumber(userData.phoneNumber);
+        }
+
         const snakeUserData = camelToSnake(userData);
         const fields = Object.keys(snakeUserData).join(', ');
         const placeholders = Object.keys(snakeUserData).map((_, index) => `$${index + 1}`).join(', ');
@@ -67,7 +68,6 @@ export const updateUser = async (req: AuthenticatedRequest, res: Response): Prom
         'firstName',
         'lastName',
         'title',
-        'phoneNumber',
         'neighborhoodId',
         'photoUrl',
     ];
