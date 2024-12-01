@@ -22,10 +22,7 @@ export const createUser = async ({ body: userData }: AuthenticatedRequest, res: 
 
         const user = snakeToCamel(result.rows[0]) as User;
 
-        res.status(201).json({
-            message: 'User created successfully.',
-            user,
-        });
+        res.status(201).json(user);
     } catch (error) {
         const errorMessage = (error as Error).message || 'Failed to create user.';
         showError(res, 400, errorMessage);
