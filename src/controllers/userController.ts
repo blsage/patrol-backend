@@ -130,11 +130,17 @@ export const deleteUser = async (req: AuthenticatedRequest, res: Response): Prom
     }
 };
 
-export const getUsersByNeighborhood = async (req: Request, res: Response): Promise<void> => {
+export const getUsersByNeighborhood = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     const { neighborhoodId } = req.params;
+    const userId = req.user?.id;
 
     if (!neighborhoodId) {
         showError(res, 400, 'Neighborhood ID is required.');
+        return;
+    }
+
+    if (!userId) {
+        showError(res, 401, 'Unauthorized');
         return;
     }
 
@@ -146,7 +152,7 @@ export const getUsersByNeighborhood = async (req: Request, res: Response): Promi
             return;
         }
 
-        const userSupportSummaries = await getUsersByNeighborhoodWithSupportCount(neighborhoodIdInt);
+        const userSupportSummaries = await getUsersByNeighborhoodWithSupportCount(neighborhoodIdInt, userId);
 
         res.status(200).json(userSupportSummaries);
     } catch (error) {

@@ -93,7 +93,8 @@ export interface UserSupportSummary {
 }
 
 export const getUsersByNeighborhoodWithSupportCount = async (
-    neighborhoodId: number
+    neighborhoodId: number,
+    excludeUserId?: number
 ): Promise<UserSupportSummary[]> => {
     const query = `
         SELECT u.id,
@@ -104,16 +105,20 @@ export const getUsersByNeighborhoodWithSupportCount = async (
         FROM users u
         LEFT JOIN supports s ON u.id = s.user_id
         WHERE u.neighborhood_id = $1
+        ${excludeUserId ? 'AND u.id != $2' : ''}
         GROUP BY u.id, u.first_name, u.last_name, u.photo_url
     `;
-    const values = [neighborhoodId];
+    const values = excludeUserId ? [neighborhoodId, excludeUserId] : [neighborhoodId];
 
     const result = await pool.query(query, values);
 
     const userSupportSummaries = result.rows.map((row) => {
+        const lastInitial = row.last_name ? row.last_name.charAt(0) : '';
+        const name = `${row.first_name} ${lastInitial}`.trim();
+
         const user: PlatformUser = {
             id: row.id,
-            name: `${row.first_name} ${row.last_name}`.trim(),
+            name: name || null,
             image: row.photo_url || null,
         };
 
