@@ -80,3 +80,50 @@ export const deleteUserById = async (id: number): Promise<void> => {
     const query = 'DELETE FROM users WHERE id = $1';
     await pool.query(query, [id]);
 };
+
+export interface PlatformUser {
+    id: number;
+    name: string | null;
+    image: string | null;
+}
+
+export interface UserSupportSummary {
+    count: number;
+    user: PlatformUser;
+}
+
+export const getUsersByNeighborhoodWithSupportCount = async (
+    neighborhoodId: number
+): Promise<UserSupportSummary[]> => {
+    const query = `
+        SELECT u.id,
+               u.first_name,
+               u.last_name,
+               u.photo_url,
+               COUNT(s.id) AS support_count
+        FROM users u
+        LEFT JOIN supports s ON u.id = s.user_id
+        WHERE u.neighborhood_id = $1
+        GROUP BY u.id, u.first_name, u.last_name, u.photo_url
+    `;
+    const values = [neighborhoodId];
+
+    const result = await pool.query(query, values);
+
+    const userSupportSummaries = result.rows.map((row) => {
+        const user: PlatformUser = {
+            id: row.id,
+            name: `${row.first_name} ${row.last_name}`.trim(),
+            image: row.photo_url || null,
+        };
+
+        const userSupportSummary: UserSupportSummary = {
+            count: parseInt(row.support_count, 10) || 0,
+            user,
+        };
+
+        return userSupportSummary;
+    });
+
+    return userSupportSummaries;
+};

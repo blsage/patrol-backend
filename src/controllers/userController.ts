@@ -1,5 +1,5 @@
-import { Response } from 'express';
-import { findUserById, updateUserById, deleteUserById, User } from '../models/userModel';
+import { Response, Request } from 'express';
+import { findUserById, updateUserById, deleteUserById, getUsersByNeighborhoodWithSupportCount, User } from '../models/userModel';
 import pool from '../db/db';
 import { AuthenticatedRequest } from '../middleware/authMiddleware';
 import { showError } from '../utils/errorUtils';
@@ -126,6 +126,31 @@ export const deleteUser = async (req: AuthenticatedRequest, res: Response): Prom
         res.status(200).json({ message: 'User deleted successfully.' });
     } catch (error) {
         const errorMessage = (error as Error).message || 'Failed to delete user.';
+        showError(res, 500, errorMessage);
+    }
+};
+
+export const getUsersByNeighborhood = async (req: Request, res: Response): Promise<void> => {
+    const { neighborhoodId } = req.params;
+
+    if (!neighborhoodId) {
+        showError(res, 400, 'Neighborhood ID is required.');
+        return;
+    }
+
+    try {
+        const neighborhoodIdInt = parseInt(neighborhoodId, 10);
+
+        if (isNaN(neighborhoodIdInt)) {
+            showError(res, 400, 'Invalid Neighborhood ID.');
+            return;
+        }
+
+        const userSupportSummaries = await getUsersByNeighborhoodWithSupportCount(neighborhoodIdInt);
+
+        res.status(200).json(userSupportSummaries);
+    } catch (error) {
+        const errorMessage = (error as Error).message || 'Failed to retrieve users.';
         showError(res, 500, errorMessage);
     }
 };
