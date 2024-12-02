@@ -7,4 +7,5 @@ const router = (0, express_1.Router)();
 router.post('/', authMiddleware_1.authenticateJWT, userController_1.createUser);
 router.get('/me', authMiddleware_1.authenticateJWT, userController_1.getUser);
 router.patch('/me', authMiddleware_1.authenticateJWT, userController_1.updateUser);
+router.delete('/me', authMiddleware_1.authenticateJWT, userController_1.deleteUser);
 exports.default = router;

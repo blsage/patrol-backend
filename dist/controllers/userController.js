@@ -12,40 +12,27 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateUser = exports.getUser = exports.createUser = void 0;
+exports.deleteUser = exports.updateUser = exports.getUser = exports.createUser = void 0;
 const userModel_1 = require("../models/userModel");
-const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const db_1 = __importDefault(require("../db/db"));
 const errorUtils_1 = require("../utils/errorUtils");
 const phoneUtils_1 = require("../utils/phoneUtils");
-const JWT_SECRET = process.env.JWT_SECRET;
-const createUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { email, first, last, title, phone, neighborhoodId, photoUrl } = req.body;
-    if (!email || !first || !last || !title || !phone || !neighborhoodId) {
-        (0, errorUtils_1.showError)(res, 400, 'Email, first name, last name, title, phone, and neighborhoodId are required.');
-        return;
-    }
+const caseConverter_1 = require("../utils/caseConverter");
+const createUser = (_a, res_1) => __awaiter(void 0, [_a, res_1], void 0, function* ({ body: userData }, res) {
     try {
-        const formattedPhone = (0, phoneUtils_1.formatPhoneNumber)(phone);
-        const userExists = yield (0, userModel_1.findUserByPhoneNumber)(formattedPhone);
-        if (userExists) {
-            (0, errorUtils_1.showError)(res, 400, 'User already exists.');
-            return;
+        if (userData.phoneNumber) {
+            userData.phoneNumber = (0, phoneUtils_1.formatPhoneNumber)(userData.phoneNumber);
         }
-        yield db_1.default.query('INSERT INTO users (phone_number, email, first_name, last_name, title, neighborhood_id, photo_url) VALUES ($1, $2, $3, $4, $5, $6, $7)', [formattedPhone, email, first, last, title, neighborhoodId, photoUrl]);
-        const user = yield (0, userModel_1.findUserByPhoneNumber)(formattedPhone);
-        if (!user) {
-            (0, errorUtils_1.showError)(res, 500, 'Failed to retrieve user after creation.');
-            return;
-        }
-        const token = jsonwebtoken_1.default.sign({ id: user.id }, JWT_SECRET, {
-            expiresIn: '360d',
-        });
-        res.status(201).json({
-            message: 'User created successfully.',
-            user,
-            token,
-        });
+        const snakeUserData = (0, caseConverter_1.camelToSnake)(userData);
+        const fields = Object.keys(snakeUserData).join(', ');
+        const placeholders = Object.keys(snakeUserData).map((_, index) => `$${index + 1}`).join(', ');
+        const values = Object.values(snakeUserData);
+        const query = `INSERT INTO users (${fields}) VALUES (${placeholders}) RETURNING *`;
+        const result = yield db_1.default.query(query, values);
+        const user = (0, caseConverter_1.snakeToCamel)(result.rows[0]);
+        user.monthlyContribution = 0;
+        user.totalContribution = 0;
+        res.status(201).json(user);
     }
     catch (error) {
         const errorMessage = error.message || 'Failed to create user.';
@@ -86,7 +73,6 @@ const updateUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         'firstName',
         'lastName',
         'title',
-        'phoneNumber',
         'neighborhoodId',
         'photoUrl',
     ];
@@ -119,3 +105,25 @@ const updateUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
     }
 });
 exports.updateUser = updateUser;
+const deleteUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
+    if (!userId) {
+        (0, errorUtils_1.showError)(res, 401, 'Unauthorized');
+        return;
+    }
+    try {
+        const user = yield (0, userModel_1.findUserById)(userId);
+        if (!user) {
+            (0, errorUtils_1.showError)(res, 404, 'User not found.');
+            return;
+        }
+        yield (0, userModel_1.deleteUserById)(userId);
+        res.status(200).json({ message: 'User deleted successfully.' });
+    }
+    catch (error) {
+        const errorMessage = error.message || 'Failed to delete user.';
+        (0, errorUtils_1.showError)(res, 500, errorMessage);
+    }
+});
+exports.deleteUser = deleteUser;
