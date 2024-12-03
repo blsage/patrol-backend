@@ -134,8 +134,8 @@ export const getUsersByNeighborhoodWithSupportCount = async (
 };
 
 export interface UserContributionSummary {
-    totalContributionAmount: number;
-    last30DaysContributionAmount: number;
+    total: number;
+    last30: number;
     user: PlatformUser;
 }
 
@@ -153,22 +153,16 @@ export const getUsersWithContributionSummaries = async (
                u.first_name,
                u.last_name,
                u.photo_url,
-               COALESCE(tc.total_amount, 0) AS total_contribution_amount,
-               COALESCE(l30c.last_30_days_amount, 0) AS last_30_days_contribution_amount
+               SUM(c.amount) AS total_contribution_amount,
+               SUM(
+                   CASE WHEN c.created_at >= NOW() - INTERVAL '30 days' THEN c.amount ELSE 0 END
+               ) AS last_30_days_contribution_amount
         FROM users u
-        INNER JOIN (
-            SELECT user_id, SUM(amount) AS total_amount
-            FROM contributions
-            GROUP BY user_id
-        ) tc ON u.id = tc.user_id
-        INNER JOIN (
-            SELECT user_id, SUM(amount) AS last_30_days_amount
-            FROM contributions
-            WHERE created_at >= NOW() - INTERVAL '30 days'
-            GROUP BY user_id
-        ) l30c ON u.id = l30c.user_id
+        JOIN contributions c ON u.id = c.user_id
         WHERE u.neighborhood_id = $1
-        ${excludeUserId ? 'AND u.id != $2' : ''}
+          AND c.neighborhood_id = $1
+          ${excludeUserId ? 'AND u.id != $2' : ''}
+        GROUP BY u.id, u.first_name, u.last_name, u.photo_url
     `;
 
     const result = await pool.query(query, values);
@@ -184,8 +178,8 @@ export const getUsersWithContributionSummaries = async (
         };
 
         const userContributionSummary: UserContributionSummary = {
-            totalContributionAmount: parseFloat(row.total_contribution_amount) || 0,
-            last30DaysContributionAmount: parseFloat(row.last_30_days_contribution_amount) || 0,
+            total: parseInt(row.total_contribution_amount, 10) || 0,
+            last30: parseInt(row.last_30_days_contribution_amount, 10) || 0,
             user,
         };
 
