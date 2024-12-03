@@ -132,3 +132,65 @@ export const getUsersByNeighborhoodWithSupportCount = async (
 
     return userSupportSummaries;
 };
+
+export interface UserContributionSummary {
+    totalContributionAmount: number;
+    last30DaysContributionAmount: number;
+    user: PlatformUser;
+}
+
+export const getUsersWithContributionSummaries = async (
+    neighborhoodId: number,
+    excludeUserId?: number
+): Promise<UserContributionSummary[]> => {
+    const values = [neighborhoodId];
+    if (excludeUserId) {
+        values.push(excludeUserId);
+    }
+
+    const query = `
+        SELECT u.id,
+               u.first_name,
+               u.last_name,
+               u.photo_url,
+               COALESCE(tc.total_amount, 0) AS total_contribution_amount,
+               COALESCE(l30c.last_30_days_amount, 0) AS last_30_days_contribution_amount
+        FROM users u
+        INNER JOIN (
+            SELECT user_id, SUM(amount) AS total_amount
+            FROM contributions
+            GROUP BY user_id
+        ) tc ON u.id = tc.user_id
+        INNER JOIN (
+            SELECT user_id, SUM(amount) AS last_30_days_amount
+            FROM contributions
+            WHERE created_at >= NOW() - INTERVAL '30 days'
+            GROUP BY user_id
+        ) l30c ON u.id = l30c.user_id
+        WHERE u.neighborhood_id = $1
+        ${excludeUserId ? 'AND u.id != $2' : ''}
+    `;
+
+    const result = await pool.query(query, values);
+
+    const userContributionSummaries = result.rows.map((row) => {
+        const lastInitial = row.last_name ? row.last_name.charAt(0) : '';
+        const name = `${row.first_name} ${lastInitial}`.trim();
+
+        const user: PlatformUser = {
+            id: row.id,
+            name: name || null,
+            image: row.photo_url || null,
+        };
+
+        const userContributionSummary: UserContributionSummary = {
+            totalContributionAmount: parseFloat(row.total_contribution_amount) || 0,
+            last30DaysContributionAmount: parseFloat(row.last_30_days_contribution_amount) || 0,
+            user,
+        };
+
+        return userContributionSummary;
+    });
+
+    return userContributionSummaries;
+};

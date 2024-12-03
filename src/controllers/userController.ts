@@ -1,5 +1,5 @@
 import { Response, Request } from 'express';
-import { findUserById, updateUserById, deleteUserById, getUsersByNeighborhoodWithSupportCount, User } from '../models/userModel';
+import { findUserById, updateUserById, deleteUserById, getUsersByNeighborhoodWithSupportCount, getUsersWithContributionSummaries, User } from '../models/userModel';
 import pool from '../db/db';
 import { AuthenticatedRequest } from '../middleware/authMiddleware';
 import { showError } from '../utils/errorUtils';
@@ -157,6 +157,44 @@ export const getUsersByNeighborhood = async (req: AuthenticatedRequest, res: Res
         res.status(200).json(userSupportSummaries);
     } catch (error) {
         const errorMessage = (error as Error).message || 'Failed to retrieve users.';
+        showError(res, 500, errorMessage);
+    }
+};
+
+export const getUsersWithContributions = async (
+    req: AuthenticatedRequest,
+    res: Response
+): Promise<void> => {
+    const { neighborhoodId } = req.params;
+    const userId = req.user?.id;
+
+    if (!neighborhoodId) {
+        showError(res, 400, 'Neighborhood ID is required.');
+        return;
+    }
+
+    if (!userId) {
+        showError(res, 401, 'Unauthorized');
+        return;
+    }
+
+    try {
+        const neighborhoodIdInt = parseInt(neighborhoodId, 10);
+
+        if (isNaN(neighborhoodIdInt)) {
+            showError(res, 400, 'Invalid Neighborhood ID.');
+            return;
+        }
+
+        const userContributionSummaries = await getUsersWithContributionSummaries(
+            neighborhoodIdInt,
+            userId
+        );
+
+        res.status(200).json(userContributionSummaries);
+    } catch (error) {
+        const errorMessage =
+            (error as Error).message || 'Failed to retrieve users with contributions.';
         showError(res, 500, errorMessage);
     }
 };
