@@ -4,7 +4,7 @@ import { AuthenticatedRequest } from '../middleware/authMiddleware';
 import { showError } from '../utils/errorUtils';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
-    apiVersion: '2023-08-16',
+    apiVersion: '2023-08-16' as any,
 });
 
 export const createContribution = async (req: AuthenticatedRequest, res: Response): Promise<void> => {

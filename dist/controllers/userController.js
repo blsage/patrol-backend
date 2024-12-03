@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteUser = exports.updateUser = exports.getUser = exports.createUser = void 0;
+exports.getUsersByNeighborhood = exports.deleteUser = exports.updateUser = exports.getUser = exports.createUser = void 0;
 const userModel_1 = require("../models/userModel");
 const db_1 = __importDefault(require("../db/db"));
 const errorUtils_1 = require("../utils/errorUtils");
@@ -127,3 +127,30 @@ const deleteUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
     }
 });
 exports.deleteUser = deleteUser;
+const getUsersByNeighborhood = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const { neighborhoodId } = req.params;
+    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
+    if (!neighborhoodId) {
+        (0, errorUtils_1.showError)(res, 400, 'Neighborhood ID is required.');
+        return;
+    }
+    if (!userId) {
+        (0, errorUtils_1.showError)(res, 401, 'Unauthorized');
+        return;
+    }
+    try {
+        const neighborhoodIdInt = parseInt(neighborhoodId, 10);
+        if (isNaN(neighborhoodIdInt)) {
+            (0, errorUtils_1.showError)(res, 400, 'Invalid Neighborhood ID.');
+            return;
+        }
+        const userSupportSummaries = yield (0, userModel_1.getUsersByNeighborhoodWithSupportCount)(neighborhoodIdInt, userId);
+        res.status(200).json(userSupportSummaries);
+    }
+    catch (error) {
+        const errorMessage = error.message || 'Failed to retrieve users.';
+        (0, errorUtils_1.showError)(res, 500, errorMessage);
+    }
+});
+exports.getUsersByNeighborhood = getUsersByNeighborhood;

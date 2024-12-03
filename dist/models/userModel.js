@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteUserById = exports.updateUserById = exports.findUserByPhoneNumber = exports.findUserById = void 0;
+exports.getUsersByNeighborhoodWithSupportCount = exports.deleteUserById = exports.updateUserById = exports.findUserByPhoneNumber = exports.findUserById = void 0;
 const db_1 = __importDefault(require("../db/db"));
 const caseConverter_1 = require("../utils/caseConverter");
 const _findUser = (column, value) => __awaiter(void 0, void 0, void 0, function* () {
@@ -70,3 +70,35 @@ const deleteUserById = (id) => __awaiter(void 0, void 0, void 0, function* () {
     yield db_1.default.query(query, [id]);
 });
 exports.deleteUserById = deleteUserById;
+const getUsersByNeighborhoodWithSupportCount = (neighborhoodId, excludeUserId) => __awaiter(void 0, void 0, void 0, function* () {
+    const query = `
+        SELECT u.id,
+               u.first_name,
+               u.last_name,
+               u.photo_url,
+               COUNT(s.id) AS support_count
+        FROM users u
+        LEFT JOIN supports s ON u.id = s.user_id
+        WHERE u.neighborhood_id = $1
+        ${excludeUserId ? 'AND u.id != $2' : ''}
+        GROUP BY u.id, u.first_name, u.last_name, u.photo_url
+    `;
+    const values = excludeUserId ? [neighborhoodId, excludeUserId] : [neighborhoodId];
+    const result = yield db_1.default.query(query, values);
+    const userSupportSummaries = result.rows.map((row) => {
+        const lastInitial = row.last_name ? row.last_name.charAt(0) : '';
+        const name = `${row.first_name} ${lastInitial}`.trim();
+        const user = {
+            id: row.id,
+            name: name || null,
+            image: row.photo_url || null,
+        };
+        const userSupportSummary = {
+            count: parseInt(row.support_count, 10) || 0,
+            user,
+        };
+        return userSupportSummary;
+    });
+    return userSupportSummaries;
+});
+exports.getUsersByNeighborhoodWithSupportCount = getUsersByNeighborhoodWithSupportCount;
