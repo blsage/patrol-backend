@@ -3,6 +3,8 @@ import authRoutes from './routes/authRoutes';
 import userRoutes from './routes/userRoutes';
 import storageRoutes from './routes/storageRoutes';
 import supportRoutes from './routes/supportRoutes';
+import contributionRoutes from './routes/contributionRoutes';
+
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -14,6 +16,7 @@ app.use('/auth', authRoutes);
 app.use('/users', userRoutes);
 app.use('/storage', storageRoutes);
 app.use('/support', supportRoutes);
+app.use('/contributions', contributionRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

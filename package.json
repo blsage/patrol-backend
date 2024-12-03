@@ -21,6 +21,7 @@
     "google-libphonenumber": "^3.2.39",
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.13.1",
+    "stripe": "^17.4.0",
     "twilio": "^5.3.6",
     "uuid": "^11.0.3"
   },
