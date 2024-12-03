@@ -12,7 +12,7 @@ dotenv.config();
 
 const app = express();
 
-app.use('/webhook', webhookRoutes);
+app.use('/webhooks', webhookRoutes);
 
 app.use(express.json());
 app.use('/auth', authRoutes);
