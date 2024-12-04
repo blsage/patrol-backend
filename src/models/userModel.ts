@@ -101,12 +101,14 @@ export const getUsersByNeighborhoodWithSupportCount = async (
                u.first_name,
                u.last_name,
                u.photo_url,
-               COUNT(s.id) AS support_count
+               COUNT(s.id) AS support_count,
+               MAX(s.created_at) AS latest_support_date
         FROM users u
         LEFT JOIN supports s ON u.id = s.user_id
         WHERE u.neighborhood_id = $1
         ${excludeUserId ? 'AND u.id != $2' : ''}
         GROUP BY u.id, u.first_name, u.last_name, u.photo_url
+        ORDER BY latest_support_date DESC NULLS LAST
     `;
     const values = excludeUserId ? [neighborhoodId, excludeUserId] : [neighborhoodId];
 
@@ -153,6 +155,7 @@ export const getUsersWithContributionSummaries = async (
                u.first_name,
                u.last_name,
                u.photo_url,
+               MAX(c.created_at) AS latest_contribution_date,
                SUM(c.amount) AS total_contribution_amount,
                SUM(
                    CASE WHEN c.created_at >= NOW() - INTERVAL '30 days' THEN c.amount ELSE 0 END
@@ -163,6 +166,7 @@ export const getUsersWithContributionSummaries = async (
           AND c.neighborhood_id = $1
           ${excludeUserId ? 'AND u.id != $2' : ''}
         GROUP BY u.id, u.first_name, u.last_name, u.photo_url
+        ORDER BY latest_contribution_date DESC
     `;
 
     const result = await pool.query(query, values);
