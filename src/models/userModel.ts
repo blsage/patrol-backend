@@ -138,6 +138,7 @@ export const getUsersByNeighborhoodWithSupportCount = async (
 export interface UserContributionSummary {
     total: number;
     last30: number;
+    likes: number;
     user: PlatformUser;
 }
 
@@ -159,7 +160,8 @@ export const getUsersWithContributionSummaries = async (
                SUM(c.amount) AS total_contribution_amount,
                SUM(
                    CASE WHEN c.created_at >= NOW() - INTERVAL '30 days' THEN c.amount ELSE 0 END
-               ) AS last_30_days_contribution_amount
+               ) AS last_30_days_contribution_amount,
+               SUM(c.like_count) AS total_like_count
         FROM users u
         JOIN contributions c ON u.id = c.user_id
         WHERE u.neighborhood_id = $1
@@ -184,6 +186,7 @@ export const getUsersWithContributionSummaries = async (
         const userContributionSummary: UserContributionSummary = {
             total: parseInt(row.total_contribution_amount, 10) || 0,
             last30: parseInt(row.last_30_days_contribution_amount, 10) || 0,
+            likes: parseInt(row.total_like_count, 10) || 0,
             user,
         };
 

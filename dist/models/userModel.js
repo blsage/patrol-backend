@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getUsersByNeighborhoodWithSupportCount = exports.deleteUserById = exports.updateUserById = exports.findUserByPhoneNumber = exports.findUserById = void 0;
+exports.getUsersWithContributionSummaries = exports.getUsersByNeighborhoodWithSupportCount = exports.deleteUserById = exports.updateUserById = exports.findUserByPhoneNumber = exports.findUserById = void 0;
 const db_1 = __importDefault(require("../db/db"));
 const caseConverter_1 = require("../utils/caseConverter");
 const _findUser = (column, value) => __awaiter(void 0, void 0, void 0, function* () {
@@ -76,12 +76,14 @@ const getUsersByNeighborhoodWithSupportCount = (neighborhoodId, excludeUserId) =
                u.first_name,
                u.last_name,
                u.photo_url,
-               COUNT(s.id) AS support_count
+               COUNT(s.id) AS support_count,
+               MAX(s.created_at) AS latest_support_date
         FROM users u
         LEFT JOIN supports s ON u.id = s.user_id
         WHERE u.neighborhood_id = $1
         ${excludeUserId ? 'AND u.id != $2' : ''}
         GROUP BY u.id, u.first_name, u.last_name, u.photo_url
+        ORDER BY latest_support_date DESC NULLS LAST
     `;
     const values = excludeUserId ? [neighborhoodId, excludeUserId] : [neighborhoodId];
     const result = yield db_1.default.query(query, values);
@@ -102,3 +104,47 @@ const getUsersByNeighborhoodWithSupportCount = (neighborhoodId, excludeUserId) =
     return userSupportSummaries;
 });
 exports.getUsersByNeighborhoodWithSupportCount = getUsersByNeighborhoodWithSupportCount;
+const getUsersWithContributionSummaries = (neighborhoodId, excludeUserId) => __awaiter(void 0, void 0, void 0, function* () {
+    const values = [neighborhoodId];
+    if (excludeUserId) {
+        values.push(excludeUserId);
+    }
+    const query = `
+        SELECT u.id,
+               u.first_name,
+               u.last_name,
+               u.photo_url,
+               MAX(c.created_at) AS latest_contribution_date,
+               SUM(c.amount) AS total_contribution_amount,
+               SUM(
+                   CASE WHEN c.created_at >= NOW() - INTERVAL '30 days' THEN c.amount ELSE 0 END
+               ) AS last_30_days_contribution_amount,
+               SUM(c.like_count) AS total_like_count
+        FROM users u
+        JOIN contributions c ON u.id = c.user_id
+        WHERE u.neighborhood_id = $1
+          AND c.neighborhood_id = $1
+          ${excludeUserId ? 'AND u.id != $2' : ''}
+        GROUP BY u.id, u.first_name, u.last_name, u.photo_url
+        ORDER BY latest_contribution_date DESC
+    `;
+    const result = yield db_1.default.query(query, values);
+    const userContributionSummaries = result.rows.map((row) => {
+        const lastInitial = row.last_name ? row.last_name.charAt(0) : '';
+        const name = `${row.first_name} ${lastInitial}`.trim();
+        const user = {
+            id: row.id,
+            name: name || null,
+            image: row.photo_url || null,
+        };
+        const userContributionSummary = {
+            total: parseInt(row.total_contribution_amount, 10) || 0,
+            last30: parseInt(row.last_30_days_contribution_amount, 10) || 0,
+            likes: parseInt(row.total_like_count, 10) || 0,
+            user,
+        };
+        return userContributionSummary;
+    });
+    return userContributionSummaries;
+});
+exports.getUsersWithContributionSummaries = getUsersWithContributionSummaries;
