@@ -5,4 +5,5 @@ const contributionController_1 = require("../controllers/contributionController"
 const authMiddleware_1 = require("../middleware/authMiddleware");
 const router = (0, express_1.Router)();
 router.post('/', authMiddleware_1.authenticateJWT, contributionController_1.createContribution);
+router.get('/neighborhoods/:neighborhoodId/contributions', authMiddleware_1.authenticateJWT, contributionController_1.getContributions);
 exports.default = router;
