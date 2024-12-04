@@ -5,6 +5,7 @@ import storageRoutes from './routes/storageRoutes';
 import supportRoutes from './routes/supportRoutes';
 import contributionRoutes from './routes/contributionRoutes';
 import webhookRoutes from './routes/webhookRoutes';
+import neighborhoodRoutes from './routes/neighborhoodRoutes';
 
 import dotenv from 'dotenv';
 
@@ -20,6 +21,7 @@ app.use('/users', userRoutes);
 app.use('/storage', storageRoutes);
 app.use('/support', supportRoutes);
 app.use('/contributions', contributionRoutes);
+app.use('/neighborhoods', neighborhoodRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
